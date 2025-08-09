@@ -55,7 +55,7 @@ class YekSalaiApp {
 
     async loadClanData() {
         try {
-            const response = await fetch('https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/26585a4d250f1df71f9d92d305b8a786/81ca30bb-0541-4e0b-8a14-e6ac3f374550/0103afef.json');
+            const response = await fetch('./yek_salai_database.json');
             if (response.ok) {
                 this.clanData = await response.json();
                 console.log('Clan data loaded successfully', this.clanData);
