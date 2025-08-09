@@ -701,67 +701,7 @@ class YekSalaiApp {
         container.className = 'compatibility-result active education';
     }
 
-    checkCompatibilityWithFamilyHistory(surname1, surname2) {
-        // This method integrates family tree data with marriage compatibility checking
-        if (!this.familyTree || Object.keys(this.familyTree).length === 0) {
-            return this.enhancedMarriageChecker.checkCompatibility(surname1, surname2);
-        }
 
-        // Analyze family tree for kinship relationships
-        const familyHistory = this.analyzeFamilyHistory(surname1, surname2);
-        
-        // Use enhanced marriage checker with family history
-        return this.enhancedMarriageChecker.checkCompatibility(surname1, surname2, familyHistory);
-    }
-
-    analyzeFamilyHistory(surname1, surname2) {
-        // Analyze family tree for common ancestors and kinship relationships
-        const analysis = {
-            commonSisters: false,
-            commonSiblings: false,
-            lineType: null,
-            generations: 0
-        };
-
-        // This is a simplified analysis - in a real implementation, you would
-        // traverse the family tree to find actual relationships
-        // For now, we'll return basic analysis
-        
-        return analysis;
-    }
-
-    checkCompatibilityWithFamilyHistoryBtn() {
-        const surname1 = document.getElementById('surname1Input')?.value.trim();
-        const surname2 = document.getElementById('surname2Input')?.value.trim();
-        
-        if (!surname1 || !surname2) {
-            this.showCompatibilityResult('error', 'Please enter both surnames', 'Both surnames are required to check compatibility.');
-            return;
-        }
-        
-        if (!this.clanData) {
-            this.showCompatibilityResult('error', 'Clan data not available', 'Please wait for the clan database to load.');
-            return;
-        }
-        
-        // Find clans for both surnames
-        const clan1 = this.findClanBySurname(surname1);
-        const clan2 = this.findClanBySurname(surname2);
-        
-        if (!clan1) {
-            this.showCompatibilityResult('error', `Surname "${surname1}" not found`, 'This surname is not in our clan database.');
-            return;
-        }
-        
-        if (!clan2) {
-            this.showCompatibilityResult('error', `Surname "${surname2}" not found`, 'This surname is not in our clan database.');
-            return;
-        }
-        
-        // Check compatibility with family history
-        const enhancedResult = this.checkCompatibilityWithFamilyHistory(surname1, surname2);
-        this.showEnhancedCompatibilityResult(enhancedResult);
-    }
 
     startQuiz() {
         this.currentQuizIndex = 0;
@@ -1202,7 +1142,7 @@ class EnhancedMarriageChecker {
         this.marriageRules = marriageRules;
     }
     
-    checkCompatibility(surname1, surname2, familyHistory = null) {
+    checkCompatibility(surname1, surname2) {
         const result = {
             compatible: true,
             violations: [],
@@ -1227,14 +1167,6 @@ class EnhancedMarriageChecker {
         const shairukViolation = this.checkShairukTinnaba(surname1, surname2);
         if (shairukViolation) {
             result.violations.push(shairukViolation);
-        }
-        
-        // 3. Check Mungnaba (Kinship restrictions - if family history provided)
-        if (familyHistory) {
-            const mungnabaCheck = this.checkMungnaba(familyHistory);
-            if (mungnabaCheck.violation) {
-                result.violations.push(mungnabaCheck);
-            }
         }
         
         return this.generateDetailedResult(result);
@@ -1279,34 +1211,7 @@ class EnhancedMarriageChecker {
         return null;
     }
     
-    checkMungnaba(familyHistory) {
-        // Check for Ee Mungnaba (two sisters' descendants)
-        if (familyHistory.commonSisters) {
-            return {
-                violation: true,
-                rule: "Ee Mungnaba",
-                severity: "critical",
-                message: "Descendants of two sisters cannot marry",
-                generations: 5,
-                reason: "Too close kinship through maternal line"
-            };
-        }
-        
-        // Check for Manem Matung (brother/sister descendants)
-        if (familyHistory.commonSiblings) {
-            const generations = familyHistory.lineType === 'male' ? 7 : 5;
-            return {
-                violation: true,
-                rule: "Manem Matung",
-                severity: "critical",
-                message: "Descendants of brother and sister cannot marry",
-                generations: generations,
-                reason: "Direct sibling lineage prohibition"
-            };
-        }
-        
-        return { violation: false };
-    }
+
     
     generateDetailedResult(result) {
         if (result.violations.length > 0) {
