@@ -1628,13 +1628,13 @@ select.form-control {
 }
 
 /* Clan Colors */
-.clan-color--red { background: #ff5555; }
-.clan-color--white { background: #ffffff; border: 1px solid var(--color-border); }
-.clan-color--dark { background: #333333; }
-.clan-color--pink { background: #ff69b4; }
-.clan-color--golden { background: #ffd700; }
-.clan-color--black { background: #000000; }
-.clan-color--blue { background: #4169e1; }
+.clan-color--red { background: #dc2626; } /* Red for Mangang */
+.clan-color--white { background: #ffffff; border: 1px solid var(--color-border); } /* White for Luwang */
+.clan-color--dark { background: #000000; } /* Black for Khuman */
+.clan-color--pink { background: #eab308; } /* Yellow for Angom */
+.clan-color--golden { background: linear-gradient(45deg, #dc2626 50%, #000000 50%); } /* Red mixed with black for Moirang */
+.clan-color--black { background: #7c3aed; } /* Purple for Khaba-Nganba */
+.clan-color--blue { background: #0ea5e9; } /* Sky blue for Salai-Leishangthem */
 
 /* Responsive Design */
 @media (max-width: 768px) {

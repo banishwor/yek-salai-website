@@ -123,9 +123,21 @@ class YekSalaiApp {
     transformClanData(clans) {
         const transformed = {};
         
+        // Map JSON colors to correct CSS classes according to traditional Meitei colors
+        const colorMapping = {
+            'red': 'red',           // Mangang - Red
+            'white': 'white',       // Luwang - White  
+            'dark': 'dark',         // Khuman - Black (using 'dark' class name but black color)
+            'pink': 'pink',         // Angom - Yellow (using 'pink' class name but yellow color)
+            'golden': 'golden',     // Moirang - Red mixed with black
+            'black': 'black',       // Khaba-Nganba - Purple (using 'black' class name but purple color)
+            'blue': 'blue'          // Salai-Leishangthem - Sky blue
+        };
+        
         Object.values(clans).forEach(clan => {
+            const jsonColor = clan.color.toLowerCase();
             transformed[clan.name] = {
-                color: clan.color.toLowerCase(),
+                color: colorMapping[jsonColor] || jsonColor,
                 surnames: clan.surnames,
                 total_surnames: clan.total_surnames
             };
