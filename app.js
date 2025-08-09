@@ -55,16 +55,28 @@ class YekSalaiApp {
 
     async loadClanData() {
         try {
-            const response = await fetch('./yek_salai_database.json');
-            if (response.ok) {
-                this.clanData = await response.json();
-                console.log('Clan data loaded successfully', this.clanData);
-            } else {
-                throw new Error('Failed to load clan data');
+            // Try relative path first (for local development)
+            let response = await fetch('./yek_salai_database.json');
+            
+            // If that fails, try absolute path for GitHub Pages
+            if (!response.ok) {
+                response = await fetch('/yek-salai-website/yek_salai_database.json');
             }
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const json = await response.json();
+            console.log('Raw JSON loaded:', json); // Debug log
+            
+            // Transform the data structure to match your code
+            this.clanData = this.transformClanData(json.clans);
+            console.log('Transformed clan data:', this.clanData);
+            console.log('Total surnames loaded:', Object.values(this.clanData).reduce((total, clan) => total + (clan.surnames ? clan.surnames.length : 0), 0));
+            
         } catch (error) {
-            console.error('Error loading clan data:', error);
-            // Fallback data with sample surnames for testing
+            console.error('Failed to load clan data:', error);
+            // Keep your fallback but make it obvious
+            console.warn('Using fallback data with only 70 surnames');
             this.clanData = {
                 "Mangang": { 
                     color: "red", 
@@ -96,6 +108,20 @@ class YekSalaiApp {
                 }
             };
         }
+    }
+
+    transformClanData(clans) {
+        const transformed = {};
+        
+        Object.values(clans).forEach(clan => {
+            transformed[clan.name] = {
+                color: clan.color.toLowerCase(),
+                surnames: clan.surnames,
+                total_surnames: clan.total_surnames
+            };
+        });
+        
+        return transformed;
     }
 
     setupEventListeners() {
