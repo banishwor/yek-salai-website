@@ -28,6 +28,7 @@
                         <li><a href="#marriage-check" class="nav__link">Marriage Check</a></li>
                         <li><a href="#learn" class="nav__link">Learn</a></li>
                         <li><a href="#family-tree" class="nav__link">Family Tree</a></li>
+                        <li><a href="#community" class="nav__link">Community</a></li>
                         <li><a href="#about" class="nav__link">About</a></li>
                     </ul>
                     <button class="nav__toggle" id="navToggle">
@@ -329,6 +330,75 @@
             </div>
         </section>
 
+        <!-- Community Section -->
+                    <section id="community" class="section">
+                <div class="container">
+                    <div class="section__header">
+                        <h2 class="section__title">Community Features</h2>
+                        <p class="section__description">Connect with the Yek Salai community, contribute to our database, and help preserve Meitei heritage.</p>
+                        <button class="btn btn--outline" onclick="showCommunityFeatures()" style="margin-top: 1rem;">
+                            <span class="material-icons">visibility</span>
+                            Show Community Features
+                        </button>
+                    </div>
+
+                <div class="community-content">
+                    <!-- Feedback System -->
+                    <div class="community-card">
+                        <div class="community-card__header">
+                            <span class="material-icons">feedback</span>
+                            <h3>Feedback System</h3>
+                        </div>
+                        <p>Help us improve the platform by providing feedback, reporting issues, or suggesting new features.</p>
+                        <button class="btn btn--primary" onclick="openFeedbackModal()">
+                            <span class="material-icons">rate_review</span>
+                            Submit Feedback
+                        </button>
+                    </div>
+
+                    <!-- Surname Submission -->
+                    <div class="community-card">
+                        <div class="community-card__header">
+                            <span class="material-icons">add_circle</span>
+                            <h3>Crowdsourced Surname Additions</h3>
+                        </div>
+                        <p>Contribute new surnames to our database. Your submissions will be reviewed by the community and added to our growing collection.</p>
+                        <button class="btn btn--primary" onclick="openSurnameSubmissionModal()">
+                            <span class="material-icons">person_add</span>
+                            Submit New Surname
+                        </button>
+                    </div>
+
+                    <!-- Contribution Display -->
+                    <div class="community-card">
+                        <div class="community-card__header">
+                            <span class="material-icons">trending_up</span>
+                            <h3>Community Contributions</h3>
+                        </div>
+                        <p>See recent community contributions, track platform growth, and celebrate our contributors.</p>
+                        <div class="contribution-stats">
+                            <div class="stat-item">
+                                <span class="stat-number" id="totalContributors">0</span>
+                                <span class="stat-label">Contributors</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="recentSubmissions">0</span>
+                                <span class="stat-label">Recent Submissions</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="platformUpdates">0</span>
+                                <span class="stat-label">Platform Updates</span>
+                            </div>
+                        </div>
+                        <button class="btn btn--outline" onclick="refreshCommunityStats()">
+                            <span class="material-icons">refresh</span>
+                            Refresh Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- About Section -->
         <section id="about" class="section">
             <div class="container">
@@ -409,6 +479,106 @@
         <p>Loading clan data...</p>
     </div>
 
+    <!-- Feedback Modal -->
+            <div class="modal hidden" id="feedbackModal">
+        <div class="modal__content">
+            <div class="modal__header">
+                <h3>Submit Feedback</h3>
+                <button class="modal__close" onclick="closeModal('feedbackModal')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal__body">
+                <form id="feedbackForm">
+                    <div class="form-group">
+                        <label class="form-label">Feedback Type</label>
+                        <select id="feedbackType" class="form-control" required>
+                            <option value="">Select feedback type</option>
+                            <option value="bug">Bug Report</option>
+                            <option value="feature">Feature Request</option>
+                            <option value="improvement">Improvement Suggestion</option>
+                            <option value="general">General Feedback</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" id="feedbackTitle" class="form-control" placeholder="Brief description of your feedback" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="feedbackDescription" class="form-control" rows="4" placeholder="Detailed description of your feedback" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Your Name (Optional)</label>
+                        <input type="text" id="feedbackName" class="form-control" placeholder="Your name or username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact (Optional)</label>
+                        <input type="email" id="feedbackContact" class="form-control" placeholder="Email for follow-up">
+                    </div>
+                </form>
+            </div>
+            <div class="modal__footer">
+                <button class="btn btn--outline" onclick="closeModal('feedbackModal')">Cancel</button>
+                <button class="btn btn--primary" onclick="submitFeedback()">Submit Feedback</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Surname Submission Modal -->
+            <div class="modal hidden" id="surnameSubmissionModal">
+        <div class="modal__content">
+            <div class="modal__header">
+                <h3>Submit New Surname</h3>
+                <button class="modal__close" onclick="closeModal('surnameSubmissionModal')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal__body">
+                <form id="surnameSubmissionForm">
+                    <div class="form-group">
+                        <label class="form-label">Surname</label>
+                        <input type="text" id="newSurname" class="form-control" placeholder="Enter the surname" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Yek Salai</label>
+                        <select id="newSurnameYekSalai" class="form-control" required>
+                            <option value="">Select Yek Salai</option>
+                            <option value="Mangang">Mangang</option>
+                            <option value="Luwang">Luwang</option>
+                            <option value="Khuman">Khuman</option>
+                            <option value="Angom">Angom</option>
+                            <option value="Moirang">Moirang</option>
+                            <option value="Kha-Nganba">Kha-Nganba</option>
+                            <option value="Chenglei">Chenglei</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="surnameDescription" class="form-control" rows="3" placeholder="Brief description or historical context of this surname"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Your Name</label>
+                        <input type="text" id="submitterName" class="form-control" placeholder="Your name or username" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact (Optional)</label>
+                        <input type="email" id="submitterContact" class="form-control" placeholder="Email for follow-up">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Source (Optional)</label>
+                        <input type="text" id="surnameSource" class="form-control" placeholder="Where did you learn about this surname?">
+                    </div>
+                </form>
+            </div>
+            <div class="modal__footer">
+                <button class="btn btn--outline" onclick="closeModal('surnameSubmissionModal')">Cancel</button>
+                <button class="btn btn--primary" onclick="submitSurname()">Submit Surname</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="github-config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

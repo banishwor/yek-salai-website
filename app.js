@@ -87,6 +87,9 @@ class YekSalaiApp {
         this.genealogyBuilder = new GenealogyBuilder();
         this.migrateLegacyFamilyTree();
         
+        // Initialize Community Features
+        this.communityFeatures = new CommunityFeatures();
+        
         this.init();
     }
 
@@ -877,6 +880,20 @@ class YekSalaiApp {
                     <div class="tree-svg-container">
                         ${treeSVG}
                     </div>
+                    <div class="family-tree-legend">
+                        <div class="legend-item">
+                            <div class="legend-arrow"></div>
+                            <span>Parent to Child</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-double-arrow"></div>
+                            <span>Parental Relationship</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-equals">=</span>
+                            <span>Marriage/Partnership</span>
+                        </div>
+                    </div>
                     <div class="generation-summary">
                         <h4>Generations: ${generations.size}</h4>
                         <p>Total Family Members: ${this.familyTree.length}</p>
@@ -1571,7 +1588,19 @@ class GenealogyBuilder {
         const svgHeight = Math.max(600, [...generations.values()].reduce((max, gen) => Math.max(max, gen.length), 0) * 150);
         
         let svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
-        svg += '<defs><style>.person-node { cursor: pointer; } .person-text { font-family: Arial, sans-serif; font-size: 12px; }</style></defs>';
+        svg += '<defs>';
+        svg += '<style>.person-node { cursor: pointer; } .person-text { font-family: Arial, sans-serif; font-size: 12px; }</style>';
+        
+        // Define arrow markers
+        svg += '<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">';
+        svg += '<polygon points="0 0, 10 3.5, 0 7" fill="#666" />';
+        svg += '</marker>';
+        
+        svg += '<marker id="doubleArrow" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">';
+        svg += '<polygon points="0 0, 12 4, 0 8" fill="#1976d2" />';
+        svg += '</marker>';
+        
+        svg += '</defs>';
         
         // Draw generations
         generations.forEach((people, genLevel) => {
@@ -1601,7 +1630,8 @@ class GenealogyBuilder {
                             const fatherIndex = parentGen.findIndex(p => p.id === parents.father.id);
                             if (fatherIndex !== -1) {
                                 const fatherX = spacing * (fatherIndex + 1);
-                                svg += `<line x1="${fatherX}" y1="${parentY + 30}" x2="${x}" y2="${y - 30}" stroke="#666" stroke-width="2"/>`;
+                                // Draw arrow from father to child
+                                svg += `<line x1="${fatherX}" y1="${parentY + 30}" x2="${x}" y2="${y - 30}" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>`;
                             }
                         }
                         
@@ -1609,16 +1639,363 @@ class GenealogyBuilder {
                             const motherIndex = parentGen.findIndex(p => p.id === parents.mother.id);
                             if (motherIndex !== -1) {
                                 const motherX = spacing * (motherIndex + 1);
-                                svg += `<line x1="${motherX}" y1="${parentY + 30}" x2="${x}" y2="${y - 30}" stroke="#666" stroke-width="2"/>`;
+                                // Draw arrow from mother to child
+                                svg += `<line x1="${motherX}" y1="${parentY + 30}" x2="${x}" y2="${y - 30}" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>`;
                             }
                         }
                     }
                 }
             });
+            
+            // Draw parental relationship arrows (double-sided arrows between father and mother)
+            if (genLevel > 0) {
+                const parentGen = generations.get(genLevel - 1);
+                if (parentGen) {
+                    const parentY = 100 + ((genLevel - 1) * 150);
+                    
+                    // Group people by family (same father and mother)
+                    const families = new Map();
+                    parentGen.forEach(person => {
+                        const children = familyTree.filter(p => 
+                            p.fatherId === person.id || p.motherId === person.id
+                        );
+                        
+                        children.forEach(child => {
+                            const familyKey = `${child.fatherId || 'none'}-${child.motherId || 'none'}`;
+                            if (!families.has(familyKey)) {
+                                families.set(familyKey, { father: null, mother: null, children: [] });
+                            }
+                            const family = families.get(familyKey);
+                            if (child.fatherId === person.id) {
+                                family.father = person;
+                            }
+                            if (child.motherId === person.id) {
+                                family.mother = person;
+                            }
+                            family.children.push(child);
+                        });
+                    });
+                    
+                    // Draw double-sided arrows between parents
+                    families.forEach(family => {
+                        if (family.father && family.mother) {
+                            const fatherIndex = parentGen.findIndex(p => p.id === family.father.id);
+                            const motherIndex = parentGen.findIndex(p => p.id === family.mother.id);
+                            
+                            if (fatherIndex !== -1 && motherIndex !== -1) {
+                                const fatherX = spacing * (fatherIndex + 1);
+                                const motherX = spacing * (motherIndex + 1);
+                                
+                                // Draw double-sided arrow between father and mother
+                                const midY = parentY + 60; // Below the parent boxes
+                                const midX = (fatherX + motherX) / 2;
+                                
+                                // Left arrow (father to mother)
+                                svg += `<line x1="${fatherX + 25}" y1="${midY}" x2="${midX - 10}" y2="${midY}" stroke="#1976d2" stroke-width="3" marker-end="url(#doubleArrow)"/>`;
+                                
+                                // Right arrow (mother to father)
+                                svg += `<line x1="${motherX - 25}" y1="${midY}" x2="${midX + 10}" y2="${midY}" stroke="#1976d2" stroke-width="3" marker-end="url(#doubleArrow)"/>`;
+                                
+                                // Add equals sign in the middle
+                                svg += `<text x="${midX}" y="${midY + 5}" text-anchor="middle" font-size="16" font-weight="bold" fill="#1976d2">=</text>`;
+                            }
+                        }
+                    });
+                }
+            }
         });
         
         svg += '</svg>';
         return svg;
+    }
+}
+
+// Community Features Class
+class CommunityFeatures {
+    constructor() {
+        this.feedbackData = JSON.parse(localStorage.getItem('feedbackData')) || [];
+        this.surnameSubmissions = JSON.parse(localStorage.getItem('surnameSubmissions')) || [];
+        this.communityStats = {
+            totalContributors: 0,
+            recentSubmissions: 0,
+            platformUpdates: 0
+        };
+        this.init();
+    }
+
+    init() {
+        this.loadCommunityStats();
+        this.updateContributionDisplay();
+        
+        // Add delayed display for community features
+        this.setupDelayedDisplay();
+    }
+
+    setupDelayedDisplay() {
+        // Show community features after 3 seconds delay
+        setTimeout(() => {
+            this.showCommunityFeatures();
+        }, 3000);
+    }
+
+    showCommunityFeatures() {
+        const communitySection = document.getElementById('community');
+        if (communitySection) {
+            communitySection.classList.add('show');
+        }
+    }
+
+    // Feedback System
+    submitFeedback(feedbackData) {
+        const feedback = {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            ...feedbackData,
+            status: 'pending'
+        };
+        
+        this.feedbackData.push(feedback);
+        localStorage.setItem('feedbackData', JSON.stringify(this.feedbackData));
+        
+        // Simulate GitHub issue creation
+        this.createGitHubIssue(feedback);
+        
+        // Update stats
+        this.communityStats.totalContributors++;
+        this.updateContributionDisplay();
+        
+        return feedback;
+    }
+
+    async createGitHubIssue(feedback) {
+        try {
+            // Check if GitHub config is available
+            if (!window.GITHUB_CONFIG || !window.GITHUB_CONFIG.token || window.GITHUB_CONFIG.token === 'YOUR_GITHUB_TOKEN') {
+                console.warn('GitHub API not configured. Please update github-config.js with your GitHub details.');
+                return this.createLocalIssue(feedback);
+            }
+
+            const issueData = {
+                title: `[${feedback.type.toUpperCase()}] ${feedback.title}`,
+                body: this.formatFeedbackForGitHub(feedback),
+                labels: window.GITHUB_CONFIG.labels.feedback,
+                assignees: window.GITHUB_CONFIG.assignees,
+                milestone: window.GITHUB_CONFIG.milestone
+            };
+
+            const response = await fetch(`${window.GITHUB_CONFIG.apiBase}/repos/${window.GITHUB_CONFIG.owner}/${window.GITHUB_CONFIG.repo}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${window.GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(issueData)
+            });
+
+            if (response.ok) {
+                const issue = await response.json();
+                console.log('GitHub Issue created successfully:', issue);
+                this.showNotification(`GitHub issue #${issue.number} created successfully!`, 'success');
+                return issue;
+            } else {
+                const error = await response.json();
+                console.error('Failed to create GitHub issue:', error);
+                this.showNotification(`Failed to create GitHub issue: ${error.message}`, 'error');
+                return this.createLocalIssue(feedback);
+            }
+        } catch (error) {
+            console.error('Error creating GitHub issue:', error);
+            this.showNotification('Error creating GitHub issue. Creating local issue instead.', 'warning');
+            return this.createLocalIssue(feedback);
+        }
+    }
+
+    createLocalIssue(feedback) {
+        // Fallback to local storage when GitHub API is not available
+        const localIssue = {
+            id: Date.now(),
+            title: `[${feedback.type.toUpperCase()}] ${feedback.title}`,
+            body: this.formatFeedbackForGitHub(feedback),
+            status: 'local',
+            timestamp: new Date().toISOString()
+        };
+        
+        console.log('Local issue created:', localIssue);
+        this.showNotification('Issue saved locally (GitHub API not configured)', 'info');
+        return localIssue;
+    }
+
+    formatFeedbackForGitHub(feedback) {
+        return `## Feedback Details
+
+**Type:** ${feedback.type}
+**Title:** ${feedback.title}
+**Description:** ${feedback.description}
+
+**Submitter:** ${feedback.name || 'Anonymous'}
+**Contact:** ${feedback.contact || 'Not provided'}
+**Timestamp:** ${new Date(feedback.timestamp).toLocaleString()}
+
+---
+*This issue was automatically created from community feedback.*`;
+    }
+
+    // Surname Submission System
+    async submitSurname(surnameData) {
+        const submission = {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            ...surnameData,
+            status: 'pending',
+            votes: 0,
+            approved: false
+        };
+        
+        this.surnameSubmissions.push(submission);
+        localStorage.setItem('surnameSubmissions', JSON.stringify(this.surnameSubmissions));
+        
+        // Create GitHub issue for surname review
+        await this.createSurnameReviewIssue(submission);
+        
+        // Update stats
+        this.communityStats.recentSubmissions++;
+        this.updateContributionDisplay();
+        
+        return submission;
+    }
+
+    async createSurnameReviewIssue(submission) {
+        try {
+            // Check if GitHub config is available
+            if (!window.GITHUB_CONFIG || !window.GITHUB_CONFIG.token || window.GITHUB_CONFIG.token === 'YOUR_GITHUB_TOKEN') {
+                console.warn('GitHub API not configured. Please update github-config.js with your GitHub details.');
+                return this.createLocalSurnameIssue(submission);
+            }
+
+            const issueData = {
+                title: `[SURNAME REVIEW] ${submission.surname} - ${submission.yekSalai}`,
+                body: this.formatSurnameForGitHub(submission),
+                labels: window.GITHUB_CONFIG.labels.surname,
+                assignees: window.GITHUB_CONFIG.assignees,
+                milestone: window.GITHUB_CONFIG.milestone
+            };
+
+            const response = await fetch(`${window.GITHUB_CONFIG.apiBase}/repos/${window.GITHUB_CONFIG.owner}/${window.GITHUB_CONFIG.repo}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${window.GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(issueData)
+            });
+
+            if (response.ok) {
+                const issue = await response.json();
+                console.log('GitHub Issue created successfully:', issue);
+                this.showNotification(`Surname review issue #${issue.number} created successfully!`, 'success');
+                return issue;
+            } else {
+                const error = await response.json();
+                console.error('Failed to create GitHub issue:', error);
+                this.showNotification(`Failed to create GitHub issue: ${error.message}`, 'error');
+                return this.createLocalSurnameIssue(submission);
+            }
+        } catch (error) {
+            console.error('Error creating GitHub issue:', error);
+            this.showNotification('Error creating GitHub issue. Creating local issue instead.', 'warning');
+            return this.createLocalSurnameIssue(submission);
+        }
+    }
+
+    createLocalSurnameIssue(submission) {
+        // Fallback to local storage when GitHub API is not available
+        const localIssue = {
+            id: Date.now(),
+            title: `[SURNAME REVIEW] ${submission.surname} - ${submission.yekSalai}`,
+            body: this.formatSurnameForGitHub(submission),
+            status: 'local',
+            timestamp: new Date().toISOString()
+        };
+        
+        console.log('Local surname issue created:', localIssue);
+        this.showNotification('Surname review saved locally (GitHub API not configured)', 'info');
+        return localIssue;
+    }
+
+    formatSurnameForGitHub(submission) {
+        return `## New Surname Submission
+
+**Surname:** ${submission.surname}
+**Yek Salai:** ${submission.yekSalai}
+**Description:** ${submission.description || 'No description provided'}
+
+**Submitter:** ${submission.submitterName}
+**Contact:** ${submission.contact || 'Not provided'}
+**Source:** ${submission.source || 'Not specified'}
+
+**Status:** Pending community review
+**Votes:** 0
+
+---
+*This issue was automatically created from community surname submission.*`;
+    }
+
+    // Community Stats
+    loadCommunityStats() {
+        // Load from localStorage or initialize with defaults
+        const savedStats = localStorage.getItem('communityStats');
+        if (savedStats) {
+            this.communityStats = JSON.parse(savedStats);
+        } else {
+            this.communityStats = {
+                totalContributors: this.feedbackData.length + this.surnameSubmissions.length,
+                recentSubmissions: this.surnameSubmissions.filter(s => 
+                    new Date(s.timestamp) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                ).length,
+                platformUpdates: Math.floor(Math.random() * 10) + 5 // Simulated data
+            };
+        }
+    }
+
+    updateContributionDisplay() {
+        // Update the stats display in the UI
+        const totalContributorsEl = document.getElementById('totalContributors');
+        const recentSubmissionsEl = document.getElementById('recentSubmissions');
+        const platformUpdatesEl = document.getElementById('platformUpdates');
+        
+        if (totalContributorsEl) totalContributorsEl.textContent = this.communityStats.totalContributors;
+        if (recentSubmissionsEl) recentSubmissionsEl.textContent = this.communityStats.recentSubmissions;
+        if (platformUpdatesEl) platformUpdatesEl.textContent = this.communityStats.platformUpdates;
+        
+        // Save to localStorage
+        localStorage.setItem('communityStats', JSON.stringify(this.communityStats));
+    }
+
+    refreshCommunityStats() {
+        this.loadCommunityStats();
+        this.updateContributionDisplay();
+        
+        // Show refresh confirmation
+        this.showNotification('Community stats refreshed!', 'success');
+    }
+
+    showNotification(message, type = 'info') {
+        // Create and show a notification
+        const notification = document.createElement('div');
+        notification.className = `notification notification--${type}`;
+        notification.innerHTML = `
+            <span class="material-icons">${type === 'success' ? 'check_circle' : 'info'}</span>
+            <span>${message}</span>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
     }
 }
 
@@ -1638,6 +2015,104 @@ window.closeModal = function(modalId) {
 window.saveFamilyMember = function() {
     if (window.app) {
         window.app.saveFamilyMember();
+    }
+};
+
+// Community Features Global Functions
+window.openFeedbackModal = function() {
+    if (window.app) {
+        window.app.openModal('feedbackModal');
+    }
+};
+
+window.openSurnameSubmissionModal = function() {
+    if (window.app) {
+        window.app.openModal('surnameSubmissionModal');
+    }
+};
+
+window.submitFeedback = async function() {
+    if (window.app && window.app.communityFeatures) {
+        const form = document.getElementById('feedbackForm');
+        const formData = new FormData(form);
+        
+        const feedbackData = {
+            type: formData.get('feedbackType') || document.getElementById('feedbackType').value,
+            title: formData.get('feedbackTitle') || document.getElementById('feedbackTitle').value,
+            description: formData.get('feedbackDescription') || document.getElementById('feedbackDescription').value,
+            name: formData.get('feedbackName') || document.getElementById('feedbackName').value,
+            contact: formData.get('feedbackContact') || document.getElementById('feedbackContact').value
+        };
+        
+        if (!feedbackData.type || !feedbackData.title || !feedbackData.description) {
+            alert('Please fill in all required fields.');
+            return;
+        }
+        
+        try {
+            const result = await window.app.communityFeatures.submitFeedback(feedbackData);
+            console.log('Feedback submitted:', result);
+            
+            // Show success message
+            window.app.communityFeatures.showNotification('Feedback submitted successfully! Thank you for your contribution.', 'success');
+            
+            // Close modal and reset form
+            window.app.closeModal('feedbackModal');
+            form.reset();
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+            window.app.communityFeatures.showNotification('Error submitting feedback. Please try again.', 'error');
+        }
+    }
+};
+
+window.submitSurname = async function() {
+    if (window.app && window.app.communityFeatures) {
+        const form = document.getElementById('surnameSubmissionForm');
+        const formData = new FormData(form);
+        
+        const surnameData = {
+            surname: formData.get('newSurname') || document.getElementById('newSurname').value,
+            yekSalai: formData.get('newSurnameYekSalai') || document.getElementById('newSurnameYekSalai').value,
+            description: formData.get('surnameDescription') || document.getElementById('surnameDescription').value,
+            submitterName: formData.get('submitterName') || document.getElementById('submitterName').value,
+            contact: formData.get('submitterContact') || document.getElementById('submitterContact').value,
+            source: formData.get('surnameSource') || document.getElementById('surnameDescription').value
+        };
+        
+        if (!surnameData.surname || !surnameData.yekSalai || !surnameData.submitterName) {
+            alert('Please fill in all required fields.');
+            return;
+        }
+        
+        try {
+            const result = await window.app.communityFeatures.submitSurname(surnameData);
+            console.log('Surname submitted:', result);
+            
+            // Show success message
+            window.app.communityFeatures.showNotification('Surname submitted successfully! It will be reviewed by the community.', 'success');
+            
+            // Close modal and reset form
+            window.app.closeModal('surnameSubmissionModal');
+            form.reset();
+        } catch (error) {
+            console.error('Error submitting surname:', error);
+            window.app.communityFeatures.showNotification('Error submitting surname. Please try again.', 'error');
+        }
+    }
+};
+
+window.refreshCommunityStats = function() {
+    if (window.app && window.app.communityFeatures) {
+        window.app.communityFeatures.refreshCommunityStats();
+    }
+};
+
+window.showCommunityFeatures = function() {
+    const communitySection = document.getElementById('community');
+    if (communitySection) {
+        communitySection.classList.add('show');
+        communitySection.style.opacity = '1';
     }
 };
 
