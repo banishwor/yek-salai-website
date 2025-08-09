@@ -39,6 +39,54 @@ class YekSalaiApp {
             }
         ];
         
+        // Traditional Meitei Marriage Rules
+        this.marriageRules = {
+            "yek_tinnaba": {
+                "type": "permanent",
+                "description": "Same clan marriage forbidden",
+                "check": (clan1, clan2) => clan1 === clan2,
+                "severity": "critical",
+                "generations": "permanent"
+            },
+            
+            "shairuk_tinnaba": {
+                "type": "inter_clan",
+                "forbidden_pairs": [
+                    ["Khuman", "Luwang"],
+                    ["Moirang", "Angom"], 
+                    ["Khaba Nganba", "Salai Leisangthem"]
+                ],
+                "achouba": { "generations": "permanent", "applies_to": "royal" },
+                "macha": { "generations": 2, "applies_to": "common" }
+            },
+            
+            "mungnaba": {
+                "ee_mungnaba": { 
+                    "description": "Two sisters' descendants",
+                    "generations": 5,
+                    "diagram": "sister1_children ↔ sister2_children"
+                },
+                "manem_matung": {
+                    "male_line": 7,
+                    "female_line": 5,
+                    "description": "Brother/sister descendants"
+                }
+            },
+            
+            "pen_tinnaba": {
+                "generations": 3,
+                "description": "Same grandmother, different grandfathers",
+                "matrilineal": true
+            }
+        };
+        
+        // Initialize Enhanced Marriage Checker
+        this.enhancedMarriageChecker = new EnhancedMarriageChecker(this.marriageRules);
+        
+        // Initialize Genealogy Builder
+        this.genealogyBuilder = new GenealogyBuilder();
+        this.migrateLegacyFamilyTree();
+        
         this.init();
     }
 
@@ -51,6 +99,34 @@ class YekSalaiApp {
         this.initializeClanBrowser();
         this.renderFamilyTree();
         this.showLoading(false);
+    }
+
+    migrateLegacyFamilyTree() {
+        // Convert old family tree format to new PersonNode schema
+        const legacyTree = JSON.parse(localStorage.getItem('familyTree')) || [];
+        
+        if (legacyTree.length > 0 && !legacyTree[0].fatherId && !legacyTree[0].motherId) {
+            // This is a legacy format, convert it
+            const migratedTree = legacyTree.map(member => ({
+                id: member.id || `person_${Date.now()}_${Math.random()}`,
+                name: member.name,
+                surname: member.surname,
+                clan: member.clan,
+                motherId: null,
+                fatherId: null,
+                metadata: {
+                    birthYear: member.birthYear,
+                    deathYear: null,
+                    notes: member.notes || '',
+                    relationship: member.relationship, // Keep for reference
+                    dateAdded: member.dateAdded
+                }
+            }));
+            
+            this.familyTree = migratedTree;
+            localStorage.setItem('familyTree', JSON.stringify(this.familyTree));
+            console.log('Migrated legacy family tree to new schema');
+        }
     }
 
     async loadClanData() {
@@ -456,14 +532,42 @@ class YekSalaiApp {
             return;
         }
         
-        // Check compatibility
-        if (clan1 === clan2) {
-            this.showCompatibilityResult('incompatible', 'Marriage Not Allowed', 
-                `Both surnames belong to the same clan (${clan1}). According to Meitei tradition (Yek Tinnaba), marriage within the same clan is prohibited.`);
-        } else {
-            this.showCompatibilityResult('compatible', 'Marriage Allowed', 
-                `${surname1} (${clan1} clan) and ${surname2} (${clan2} clan) can marry according to Meitei traditions.`);
+        // Check compatibility using Enhanced Marriage Checker
+        const enhancedResult = this.enhancedMarriageChecker.checkCompatibility(surname1, surname2);
+        this.showEnhancedCompatibilityResult(enhancedResult);
+    }
+
+    checkDetailedCompatibility(clan1, clan2, surname1, surname2) {
+        // 1. Check Yek Tinnaba (Same clan prohibition)
+        if (this.marriageRules.yek_tinnaba.check(clan1, clan2)) {
+            return {
+                type: 'incompatible',
+                title: 'Marriage Not Allowed - Yek Tinnaba',
+                description: `Both surnames belong to the same clan (${clan1}). According to Meitei tradition (Yek Tinnaba), marriage within the same clan is permanently prohibited to prevent inbreeding and maintain clan purity.`
+            };
         }
+
+        // 2. Check Shairuk Tinnaba (Inter-clan restrictions)
+        const forbiddenPairs = this.marriageRules.shairuk_tinnaba.forbidden_pairs;
+        const isShairukRestricted = forbiddenPairs.some(pair => 
+            (pair[0] === clan1 && pair[1] === clan2) || 
+            (pair[0] === clan2 && pair[1] === clan1)
+        );
+
+        if (isShairukRestricted) {
+            return {
+                type: 'restricted',
+                title: 'Marriage Restricted - Shairuk Tinnaba',
+                description: `Marriage between ${clan1} and ${clan2} clans is restricted under Shairuk Tinnaba rules. This restriction varies by social status (Achouba/Macha) and may require special consideration or approval from clan elders.`
+            };
+        }
+
+        // 3. If no restrictions found, marriage is allowed
+        return {
+            type: 'compatible',
+            title: 'Marriage Allowed',
+            description: `${surname1} (${clan1} clan) and ${surname2} (${clan2} clan) can marry according to traditional Meitei marriage rules. No Yek Tinnaba or Shairuk Tinnaba restrictions apply to this combination.`
+        };
     }
 
     findClanBySurname(surname) {
@@ -481,8 +585,12 @@ class YekSalaiApp {
         if (!resultContainer) return;
         
         let iconClass = 'check_circle';
-        if (type === 'error' || type === 'incompatible') {
-            iconClass = type === 'error' ? 'error' : 'cancel';
+        if (type === 'error') {
+            iconClass = 'error';
+        } else if (type === 'incompatible') {
+            iconClass = 'cancel';
+        } else if (type === 'restricted') {
+            iconClass = 'warning';
         }
         
         resultContainer.innerHTML = `
@@ -608,30 +716,26 @@ class YekSalaiApp {
     saveFamilyMember() {
         const name = document.getElementById('memberName')?.value.trim();
         const surname = document.getElementById('memberSurname')?.value.trim();
-        const relationship = document.getElementById('memberRelationship')?.value;
-        const birthYear = document.getElementById('memberBirthYear')?.value;
+        const birthYear = parseInt(document.getElementById('memberBirthYear')?.value) || null;
         const notes = document.getElementById('memberNotes')?.value.trim();
         
-        if (!name || !surname || !relationship) {
-            alert('Please fill in all required fields');
+        if (!name || !surname) {
+            alert('Please fill in all required fields (Name and Surname)');
             return;
         }
         
         // Find clan for surname
         const clan = this.findClanBySurname(surname);
         
-        const member = {
-            id: Date.now(),
+        const personData = {
             name,
             surname,
             clan: clan || 'Unknown',
-            relationship,
-            birthYear: birthYear || null,
-            notes: notes || '',
-            dateAdded: new Date().toISOString()
+            birthYear,
+            notes
         };
         
-        this.familyTree.push(member);
+        const newPerson = this.genealogyBuilder.addPerson(this.familyTree, personData);
         localStorage.setItem('familyTree', JSON.stringify(this.familyTree));
         
         this.incrementStat('familyTrees');
@@ -653,31 +757,216 @@ class YekSalaiApp {
             return;
         }
         
+        // Generate SVG tree visualization
+        const treeSVG = this.genealogyBuilder.generateTreeSVG(this.familyTree);
+        const generations = this.genealogyBuilder.getGenerations(this.familyTree);
+        
         container.innerHTML = `
-            <div class="family-tree-grid">
-                ${this.familyTree.map(member => `
-                    <div class="family-member">
-                        <div class="member-name">${member.name}</div>
-                        <div class="member-details">
-                            <div>${member.surname} (${member.clan})</div>
-                            <div>${member.relationship}</div>
-                            ${member.birthYear ? `<div>Born: ${member.birthYear}</div>` : ''}
-                            ${member.notes ? `<div>${member.notes}</div>` : ''}
-                        </div>
-                        <button class="btn btn--sm" onclick="window.app.removeFamilyMember(${member.id})">Remove</button>
+            <div class="family-tree-controls">
+                <div class="tree-view-toggle">
+                    <button class="btn btn--sm active" data-view="visual" onclick="window.app.switchTreeView('visual')">Visual Tree</button>
+                    <button class="btn btn--sm" data-view="list" onclick="window.app.switchTreeView('list')">List View</button>
+                </div>
+                <div class="tree-export-buttons">
+                    <button class="btn btn--sm" onclick="window.app.exportTreeToPDF()">Export PDF</button>
+                    <button class="btn btn--sm" onclick="window.app.exportTreeToGEDCOM()">Export GEDCOM</button>
+                </div>
+            </div>
+            
+            <div class="tree-view-container">
+                <div id="visual-tree-view" class="tree-view active">
+                    <div class="tree-svg-container">
+                        ${treeSVG}
                     </div>
-                `).join('')}
+                    <div class="generation-summary">
+                        <h4>Generations: ${generations.size}</h4>
+                        <p>Total Family Members: ${this.familyTree.length}</p>
+                    </div>
+                </div>
+                
+                <div id="list-tree-view" class="tree-view">
+                    <div class="family-tree-grid">
+                        ${this.familyTree.map(member => `
+                            <div class="family-member" data-person-id="${member.id}">
+                                <div class="member-name">${member.name}</div>
+                                <div class="member-details">
+                                    <div>${member.surname} (${member.clan})</div>
+                                    ${member.metadata.birthYear ? `<div>Born: ${member.metadata.birthYear}</div>` : ''}
+                                    ${member.fatherId || member.motherId ? 
+                                        `<div class="parent-info">
+                                            ${member.fatherId ? `Father: ${this.getPersonName(member.fatherId)}` : ''}
+                                            ${member.motherId ? `Mother: ${this.getPersonName(member.motherId)}` : ''}
+                                        </div>` : ''
+                                    }
+                                    ${member.metadata.notes ? `<div>${member.metadata.notes}</div>` : ''}
+                                </div>
+                                <div class="member-actions">
+                                    <button class="btn btn--sm" onclick="window.app.editFamilyMember('${member.id}')">Edit</button>
+                                    <button class="btn btn--sm btn--danger" onclick="window.app.removeFamilyMember('${member.id}')">Remove</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
             </div>
         `;
+        
+        // Add click handlers for SVG nodes
+        this.setupTreeInteractions();
+    }
+
+    getPersonName(personId) {
+        const person = this.familyTree.find(p => p.id === personId);
+        return person ? `${person.name} ${person.surname}` : 'Unknown';
+    }
+
+    switchTreeView(viewType) {
+        // Toggle view buttons
+        document.querySelectorAll('.tree-view-toggle .btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.view === viewType) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Toggle view containers
+        document.querySelectorAll('.tree-view').forEach(view => {
+            view.classList.remove('active');
+        });
+        document.getElementById(`${viewType}-tree-view`)?.classList.add('active');
+    }
+
+    setupTreeInteractions() {
+        // Add click handlers for SVG person nodes
+        document.querySelectorAll('.person-node').forEach(node => {
+            node.addEventListener('click', (e) => {
+                const personId = e.currentTarget.dataset.personId;
+                this.selectPerson(personId);
+            });
+        });
+    }
+
+    selectPerson(personId) {
+        // Highlight selected person and show details
+        document.querySelectorAll('.person-node').forEach(node => {
+            node.classList.remove('selected');
+        });
+        document.querySelector(`[data-person-id="${personId}"]`)?.classList.add('selected');
+        
+        // Show person details in sidebar or modal
+        this.showPersonDetails(personId);
+    }
+
+    showPersonDetails(personId) {
+        const person = this.familyTree.find(p => p.id === personId);
+        if (!person) return;
+
+        const parents = this.genealogyBuilder.getParents(this.familyTree, personId);
+        const children = this.genealogyBuilder.getChildren(this.familyTree, personId);
+        const siblings = this.genealogyBuilder.getSiblings(this.familyTree, personId);
+
+        console.log('Person Details:', {
+            person,
+            parents,
+            children: children.length,
+            siblings: siblings.length
+        });
+    }
+
+    editFamilyMember(personId) {
+        const person = this.familyTree.find(p => p.id === personId);
+        if (!person) return;
+
+        // Pre-fill the form with existing data
+        document.getElementById('memberName').value = person.name;
+        document.getElementById('memberSurname').value = person.surname;
+        document.getElementById('memberBirthYear').value = person.metadata.birthYear || '';
+        document.getElementById('memberNotes').value = person.metadata.notes || '';
+
+        // Store the ID for updating
+        this.editingPersonId = personId;
+        
+        // Change modal title and button text
+        const modal = document.getElementById('addMemberModal');
+        if (modal) {
+            modal.querySelector('h3').textContent = 'Edit Family Member';
+            // You might want to change the submit button text too
+        }
+
+        this.openModal('addMemberModal');
     }
 
     removeFamilyMember(memberId) {
         if (confirm('Are you sure you want to remove this family member?')) {
-            this.familyTree = this.familyTree.filter(member => member.id !== memberId);
+            this.genealogyBuilder.deletePerson(this.familyTree, memberId);
             localStorage.setItem('familyTree', JSON.stringify(this.familyTree));
             this.renderFamilyTree();
             this.updateStats();
         }
+    }
+
+    exportTreeToPDF() {
+        // Create a simple PDF export using the browser's print functionality
+        const printWindow = window.open('', '_blank');
+        const treeSVG = this.genealogyBuilder.generateTreeSVG(this.familyTree);
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Family Tree - ${new Date().toLocaleDateString()}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .tree-svg-container { text-align: center; }
+                    .family-list { margin-top: 30px; }
+                    .family-member { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+                    @media print { 
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Yek Salai Family Tree</h1>
+                <p>Generated on: ${new Date().toLocaleDateString()}</p>
+                
+                <div class="tree-svg-container">
+                    ${treeSVG}
+                </div>
+                
+                <div class="family-list">
+                    <h2>Family Members</h2>
+                    ${this.familyTree.map(person => `
+                        <div class="family-member">
+                            <strong>${person.name} ${person.surname}</strong> (${person.clan})<br>
+                            ${person.metadata.birthYear ? `Born: ${person.metadata.birthYear}<br>` : ''}
+                            ${person.metadata.notes ? `Notes: ${person.metadata.notes}` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => window.print(), 500);
+                    }
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
+    exportTreeToGEDCOM() {
+        const gedcomData = this.genealogyBuilder.exportToGEDCOM(this.familyTree);
+        const blob = new Blob([gedcomData], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `family-tree-${new Date().toISOString().split('T')[0]}.ged`;
+        a.click();
+        
+        URL.revokeObjectURL(url);
     }
 
     exportFamilyTree() {
@@ -745,6 +1034,498 @@ class YekSalaiApp {
                 loader.classList.add('hidden');
             }
         }
+    }
+}
+
+// Enhanced Marriage Checker Class
+class EnhancedMarriageChecker {
+    constructor(marriageRules) {
+        this.marriageRules = marriageRules;
+    }
+    
+    checkCompatibility(surname1, surname2, familyHistory = null) {
+        const result = {
+            compatible: true,
+            violations: [],
+            warnings: [],
+            explanation: "",
+            diagram: null,
+            severity: "none"
+        };
+        
+        // 1. Check Yek Tinnaba
+        if (this.checkYekTinnaba(surname1, surname2)) {
+            result.violations.push({
+                rule: "Yek Tinnaba",
+                severity: "critical",
+                message: "Same clan marriage strictly prohibited",
+                generations: "permanent",
+                reason: "Common ancestor descent"
+            });
+        }
+        
+        // 2. Check Shairuk Tinnaba
+        const shairukViolation = this.checkShairukTinnaba(surname1, surname2);
+        if (shairukViolation) {
+            result.violations.push(shairukViolation);
+        }
+        
+        // 3. Check Mungnaba (if family history provided)
+        if (familyHistory) {
+            const mungnabaCheck = this.checkMungnaba(familyHistory);
+            if (mungnabaCheck.violation) {
+                result.violations.push(mungnabaCheck);
+            }
+        }
+        
+        return this.generateDetailedResult(result);
+    }
+    
+    checkYekTinnaba(surname1, surname2) {
+        // Find clans for both surnames
+        const clan1 = this.findClanBySurname(surname1);
+        const clan2 = this.findClanBySurname(surname2);
+        
+        return clan1 && clan2 && clan1 === clan2;
+    }
+    
+    checkShairukTinnaba(surname1, surname2) {
+        const clan1 = this.findClanBySurname(surname1);
+        const clan2 = this.findClanBySurname(surname2);
+        
+        if (!clan1 || !clan2) return null;
+        
+        const forbiddenPairs = this.marriageRules.shairuk_tinnaba.forbidden_pairs;
+        const isRestricted = forbiddenPairs.some(pair => 
+            (pair[0] === clan1 && pair[1] === clan2) || 
+            (pair[0] === clan2 && pair[1] === clan1)
+        );
+        
+        if (isRestricted) {
+            return {
+                rule: "Shairuk Tinnaba",
+                severity: "warning",
+                message: `Marriage between ${clan1} and ${clan2} clans requires special consideration`,
+                generations: "varies by social status",
+                reason: "Inter-clan lineage restrictions"
+            };
+        }
+        
+        return null;
+    }
+    
+    checkMungnaba(familyHistory) {
+        // Check for Ee Mungnaba (two sisters' descendants)
+        if (familyHistory.commonSisters) {
+            return {
+                violation: true,
+                rule: "Ee Mungnaba",
+                severity: "critical",
+                message: "Descendants of two sisters cannot marry",
+                generations: 5,
+                reason: "Too close kinship through maternal line"
+            };
+        }
+        
+        // Check for Manem Matung (brother/sister descendants)
+        if (familyHistory.commonSiblings) {
+            const generations = familyHistory.lineType === 'male' ? 7 : 5;
+            return {
+                violation: true,
+                rule: "Manem Matung",
+                severity: "critical",
+                message: "Descendants of brother and sister cannot marry",
+                generations: generations,
+                reason: "Direct sibling lineage prohibition"
+            };
+        }
+        
+        return { violation: false };
+    }
+    
+    generateDetailedResult(result) {
+        if (result.violations.length > 0) {
+            result.compatible = false;
+            result.severity = result.violations.some(v => v.severity === "critical") ? "critical" : "warning";
+            
+            // Generate explanation
+            const criticalViolations = result.violations.filter(v => v.severity === "critical");
+            const warningViolations = result.violations.filter(v => v.severity === "warning");
+            
+            if (criticalViolations.length > 0) {
+                result.explanation = `Marriage is strictly prohibited due to: ${criticalViolations.map(v => v.rule).join(', ')}`;
+            } else {
+                result.explanation = `Marriage requires special consideration due to: ${warningViolations.map(v => v.rule).join(', ')}`;
+            }
+            
+            // Generate diagram for the most severe violation
+            const primaryViolation = criticalViolations[0] || warningViolations[0];
+            result.diagram = this.generateLineageDiagram(primaryViolation);
+        } else {
+            result.explanation = "Marriage is permitted according to traditional Meitei marriage rules";
+        }
+        
+        return result;
+    }
+    
+    generateLineageDiagram(violation) {
+        // Generate SVG lineage diagram showing prohibited relationship
+        return `
+            <svg class="lineage-diagram" width="300" height="200" viewBox="0 0 300 200">
+                <defs>
+                    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                    </marker>
+                </defs>
+                
+                <!-- Common Ancestor -->
+                <g class="ancestor-node" transform="translate(150, 30)">
+                    <circle r="20" fill="#ff4444" stroke="#fff" stroke-width="2"/>
+                    <text x="0" y="35" text-anchor="middle" font-size="12" fill="#333">Common Ancestor</text>
+                </g>
+                
+                <!-- Descendant Lines -->
+                <g class="descendant-lines">
+                    <line x1="130" y1="50" x2="80" y2="100" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+                    <line x1="170" y1="50" x2="220" y2="100" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <!-- Prohibited marriage line -->
+                    <line x1="80" y1="150" x2="220" y2="150" stroke="#ff4444" stroke-width="3" stroke-dasharray="5,5"/>
+                    <text x="150" y="140" text-anchor="middle" font-size="10" fill="#ff4444">PROHIBITED</text>
+                    
+                    <!-- Descendant nodes -->
+                    <circle cx="80" cy="120" r="15" fill="#4CAF50" stroke="#fff" stroke-width="2"/>
+                    <circle cx="220" cy="120" r="15" fill="#4CAF50" stroke="#fff" stroke-width="2"/>
+                    
+                    <!-- Labels -->
+                    <text x="80" y="180" text-anchor="middle" font-size="10" fill="#333">Lineage 1</text>
+                    <text x="220" y="180" text-anchor="middle" font-size="10" fill="#333">Lineage 2</text>
+                </g>
+                
+                <!-- Rule label -->
+                <text x="150" y="15" text-anchor="middle" font-size="14" font-weight="bold" fill="#ff4444">${violation.rule}</text>
+            </svg>
+        `;
+    }
+    
+    findClanBySurname(surname) {
+        // This method should access the clan data from the main app
+        // For now, we'll implement a basic version
+        if (window.app && window.app.clanData) {
+            for (const [clanName, clanInfo] of Object.entries(window.app.clanData)) {
+                if (clanInfo.surnames && clanInfo.surnames.some(s => 
+                    s.toLowerCase() === surname.toLowerCase())) {
+                    return clanName;
+                }
+            }
+        }
+        return null;
+    }
+}
+
+// Genealogy Builder Class
+class GenealogyBuilder {
+    constructor() {
+        this.selectedPersonId = null;
+        this.draggedPersonId = null;
+    }
+
+    /**
+     * PersonNode Schema:
+     * {
+     *   id: string (unique identifier)
+     *   name: string
+     *   surname: string  
+     *   clan: string
+     *   motherId: string | null
+     *   fatherId: string | null
+     *   metadata: {
+     *     birthYear: number | null
+     *     deathYear: number | null
+     *     birthPlace: string | null
+     *     deathPlace: string | null
+     *     notes: string
+     *     photos: string[] (URLs or base64)
+     *     dateAdded: string (ISO date)
+     *     lastModified: string (ISO date)
+     *   }
+     * }
+     */
+
+    createPersonNode(personData) {
+        const timestamp = new Date().toISOString();
+        return {
+            id: personData.id || `person_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: personData.name || '',
+            surname: personData.surname || '',
+            clan: personData.clan || 'Unknown',
+            motherId: personData.motherId || null,
+            fatherId: personData.fatherId || null,
+            metadata: {
+                birthYear: personData.birthYear || null,
+                deathYear: personData.deathYear || null,
+                birthPlace: personData.birthPlace || null,
+                deathPlace: personData.deathPlace || null,
+                notes: personData.notes || '',
+                photos: personData.photos || [],
+                dateAdded: personData.dateAdded || timestamp,
+                lastModified: timestamp
+            }
+        };
+    }
+
+    addPerson(familyTree, personData) {
+        const newPerson = this.createPersonNode(personData);
+        familyTree.push(newPerson);
+        return newPerson;
+    }
+
+    updatePerson(familyTree, personId, updates) {
+        const personIndex = familyTree.findIndex(p => p.id === personId);
+        if (personIndex === -1) return null;
+
+        const person = familyTree[personIndex];
+        Object.assign(person, updates);
+        person.metadata.lastModified = new Date().toISOString();
+        
+        return person;
+    }
+
+    deletePerson(familyTree, personId) {
+        // Remove the person and update any children to remove parent references
+        const personIndex = familyTree.findIndex(p => p.id === personId);
+        if (personIndex === -1) return false;
+
+        // Update children to remove parent reference
+        familyTree.forEach(person => {
+            if (person.fatherId === personId) person.fatherId = null;
+            if (person.motherId === personId) person.motherId = null;
+        });
+
+        familyTree.splice(personIndex, 1);
+        return true;
+    }
+
+    setParentChild(familyTree, childId, parentId, parentType) {
+        const child = familyTree.find(p => p.id === childId);
+        const parent = familyTree.find(p => p.id === parentId);
+        
+        if (!child || !parent) return false;
+
+        if (parentType === 'father') {
+            child.fatherId = parentId;
+        } else if (parentType === 'mother') {
+            child.motherId = parentId;
+        }
+
+        child.metadata.lastModified = new Date().toISOString();
+        return true;
+    }
+
+    getGenerations(familyTree) {
+        const generations = new Map();
+        const visited = new Set();
+
+        function calculateGeneration(personId, currentGen = 0) {
+            if (visited.has(personId)) return;
+            visited.add(personId);
+
+            const person = familyTree.find(p => p.id === personId);
+            if (!person) return;
+
+            if (!generations.has(currentGen)) {
+                generations.set(currentGen, []);
+            }
+            generations.get(currentGen).push(person);
+
+            // Find children
+            const children = familyTree.filter(p => p.fatherId === personId || p.motherId === personId);
+            children.forEach(child => {
+                calculateGeneration(child.id, currentGen + 1);
+            });
+        }
+
+        // Start with people who have no parents (root generation)
+        const rootPeople = familyTree.filter(p => !p.fatherId && !p.motherId);
+        rootPeople.forEach(person => {
+            calculateGeneration(person.id, 0);
+        });
+
+        return generations;
+    }
+
+    getChildren(familyTree, personId) {
+        return familyTree.filter(p => p.fatherId === personId || p.motherId === personId);
+    }
+
+    getParents(familyTree, personId) {
+        const person = familyTree.find(p => p.id === personId);
+        if (!person) return { father: null, mother: null };
+
+        return {
+            father: person.fatherId ? familyTree.find(p => p.id === person.fatherId) : null,
+            mother: person.motherId ? familyTree.find(p => p.id === person.motherId) : null
+        };
+    }
+
+    getSiblings(familyTree, personId) {
+        const person = familyTree.find(p => p.id === personId);
+        if (!person) return [];
+
+        return familyTree.filter(p => 
+            p.id !== personId && 
+            ((p.fatherId && p.fatherId === person.fatherId) || 
+             (p.motherId && p.motherId === person.motherId))
+        );
+    }
+
+    exportToGEDCOM(familyTree) {
+        let gedcom = '0 HEAD\n';
+        gedcom += '1 SOUR Yek Salai Website\n';
+        gedcom += '1 GEDC\n';
+        gedcom += '2 VERS 5.5.1\n';
+        gedcom += '2 FORM LINEAGE-LINKED\n';
+        gedcom += '1 CHAR UTF-8\n';
+        gedcom += '1 DATE ' + new Date().toISOString().split('T')[0].replace(/-/g, ' ') + '\n';
+
+        // Add individuals
+        familyTree.forEach((person, index) => {
+            const id = `I${index + 1}`;
+            gedcom += `0 @${id}@ INDI\n`;
+            gedcom += `1 NAME ${person.name} /${person.surname}/\n`;
+            
+            if (person.metadata.birthYear) {
+                gedcom += '1 BIRT\n';
+                gedcom += `2 DATE ${person.metadata.birthYear}\n`;
+                if (person.metadata.birthPlace) {
+                    gedcom += `2 PLAC ${person.metadata.birthPlace}\n`;
+                }
+            }
+            
+            if (person.metadata.deathYear) {
+                gedcom += '1 DEAT\n';
+                gedcom += `2 DATE ${person.metadata.deathYear}\n`;
+                if (person.metadata.deathPlace) {
+                    gedcom += `2 PLAC ${person.metadata.deathPlace}\n`;
+                }
+            }
+
+            if (person.metadata.notes) {
+                gedcom += `1 NOTE ${person.metadata.notes}\n`;
+            }
+        });
+
+        // Add families (parent-child relationships)
+        const families = this.extractFamilies(familyTree);
+        families.forEach((family, index) => {
+            const famId = `F${index + 1}`;
+            gedcom += `0 @${famId}@ FAM\n`;
+            
+            if (family.father) {
+                const fatherIndex = familyTree.findIndex(p => p.id === family.father.id);
+                gedcom += `1 HUSB @I${fatherIndex + 1}@\n`;
+            }
+            
+            if (family.mother) {
+                const motherIndex = familyTree.findIndex(p => p.id === family.mother.id);
+                gedcom += `1 WIFE @I${motherIndex + 1}@\n`;
+            }
+            
+            family.children.forEach(child => {
+                const childIndex = familyTree.findIndex(p => p.id === child.id);
+                gedcom += `1 CHIL @I${childIndex + 1}@\n`;
+            });
+        });
+
+        gedcom += '0 TRLR\n';
+        return gedcom;
+    }
+
+    extractFamilies(familyTree) {
+        const families = [];
+        const processedPairs = new Set();
+
+        familyTree.forEach(person => {
+            if (person.fatherId || person.motherId) {
+                const father = person.fatherId ? familyTree.find(p => p.id === person.fatherId) : null;
+                const mother = person.motherId ? familyTree.find(p => p.id === person.motherId) : null;
+                
+                const pairKey = `${person.fatherId || 'none'}-${person.motherId || 'none'}`;
+                
+                if (!processedPairs.has(pairKey)) {
+                    processedPairs.add(pairKey);
+                    
+                    const children = familyTree.filter(p => 
+                        (person.fatherId && p.fatherId === person.fatherId) ||
+                        (person.motherId && p.motherId === person.motherId)
+                    );
+                    
+                    families.push({
+                        father,
+                        mother,
+                        children
+                    });
+                }
+            }
+        });
+
+        return families;
+    }
+
+    generateTreeSVG(familyTree) {
+        const generations = this.getGenerations(familyTree);
+        const svgWidth = Math.max(800, generations.size * 200);
+        const svgHeight = Math.max(600, [...generations.values()].reduce((max, gen) => Math.max(max, gen.length), 0) * 150);
+        
+        let svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
+        svg += '<defs><style>.person-node { cursor: pointer; } .person-text { font-family: Arial, sans-serif; font-size: 12px; }</style></defs>';
+        
+        // Draw generations
+        generations.forEach((people, genLevel) => {
+            const y = 100 + (genLevel * 150);
+            const spacing = svgWidth / (people.length + 1);
+            
+            people.forEach((person, index) => {
+                const x = spacing * (index + 1);
+                
+                // Person node
+                svg += `<g class="person-node" data-person-id="${person.id}">`;
+                svg += `<rect x="${x - 50}" y="${y - 30}" width="100" height="60" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="5"/>`;
+                svg += `<text x="${x}" y="${y - 10}" text-anchor="middle" class="person-text">${person.name}</text>`;
+                svg += `<text x="${x}" y="${y + 5}" text-anchor="middle" class="person-text">${person.surname}</text>`;
+                svg += `<text x="${x}" y="${y + 20}" text-anchor="middle" class="person-text" font-size="10">${person.clan}</text>`;
+                svg += '</g>';
+                
+                // Draw connections to parents
+                const parents = this.getParents(familyTree, person.id);
+                if (parents.father || parents.mother) {
+                    // Find parent positions in previous generation
+                    const parentGen = generations.get(genLevel - 1);
+                    if (parentGen) {
+                        const parentY = 100 + ((genLevel - 1) * 150);
+                        
+                        if (parents.father) {
+                            const fatherIndex = parentGen.findIndex(p => p.id === parents.father.id);
+                            if (fatherIndex !== -1) {
+                                const fatherX = spacing * (fatherIndex + 1);
+                                svg += `<line x1="${fatherX}" y1="${parentY + 30}" x2="${x}" y2="${y - 30}" stroke="#666" stroke-width="2"/>`;
+                            }
+                        }
+                        
+                        if (parents.mother) {
+                            const motherIndex = parentGen.findIndex(p => p.id === parents.mother.id);
+                            if (motherIndex !== -1) {
+                                const motherX = spacing * (motherIndex + 1);
+                                svg += `<line x1="${motherX}" y1="${parentY + 30}" x2="${x}" y2="${y - 30}" stroke="#666" stroke-width="2"/>`;
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        
+        svg += '</svg>';
+        return svg;
     }
 }
 

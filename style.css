@@ -1162,6 +1162,239 @@ select.form-control {
   color: var(--color-error);
 }
 
+.compatibility-result.restricted {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #f57c00;
+}
+
+/* Enhanced compatibility result styles */
+.violations-section {
+  margin-top: var(--space-16);
+  text-align: left;
+}
+
+.violations-section h4 {
+  margin-bottom: var(--space-12);
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.violation-item {
+  padding: var(--space-12);
+  margin-bottom: var(--space-8);
+  border-radius: var(--radius-md);
+  border-left: 4px solid;
+}
+
+.violation-item.critical {
+  background: rgba(var(--color-error-rgb), 0.05);
+  border-left-color: var(--color-error);
+}
+
+.violation-item.warning {
+  background: rgba(255, 193, 7, 0.05);
+  border-left-color: #f57c00;
+}
+
+.violation-details {
+  margin-top: var(--space-4);
+  opacity: 0.8;
+}
+
+.lineage-section {
+  margin-top: var(--space-16);
+  text-align: center;
+}
+
+.lineage-section h4 {
+  margin-bottom: var(--space-12);
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.diagram-container {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-16);
+  background: rgba(var(--color-surface-rgb), 0.5);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-8);
+}
+
+.lineage-diagram {
+  max-width: 100%;
+  height: auto;
+  font-family: var(--font-family-base);
+}
+
+.lineage-diagram text {
+  font-size: 10px;
+  fill: var(--color-text);
+}
+
+/* Enhanced Family Tree Styles */
+.family-tree-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-20);
+  padding: var(--space-16);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.tree-view-toggle {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.tree-view-toggle .btn.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.tree-export-buttons {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.tree-view-container {
+  position: relative;
+}
+
+.tree-view {
+  display: none;
+}
+
+.tree-view.active {
+  display: block;
+}
+
+.tree-svg-container {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-20);
+  overflow: auto;
+  max-height: 600px;
+}
+
+.tree-svg-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.person-node {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.person-node:hover rect {
+  fill: #bbdefb !important;
+  stroke: #1565c0 !important;
+}
+
+.person-node.selected rect {
+  fill: #90caf9 !important;
+  stroke: #0d47a1 !important;
+  stroke-width: 3 !important;
+}
+
+.generation-summary {
+  margin-top: var(--space-16);
+  padding: var(--space-16);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.generation-summary h4 {
+  margin: 0 0 var(--space-8) 0;
+  color: var(--color-primary);
+}
+
+.generation-summary p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.family-member {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-16);
+  margin-bottom: var(--space-12);
+  transition: all 0.2s ease;
+}
+
+.family-member:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.1);
+}
+
+.member-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--space-8);
+}
+
+.member-details {
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+}
+
+.member-details > div {
+  margin-bottom: var(--space-4);
+}
+
+.parent-info {
+  font-style: italic;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.member-actions {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.btn--danger {
+  background: var(--color-error);
+  color: white;
+  border-color: var(--color-error);
+}
+
+.btn--danger:hover {
+  background: #c62828;
+  border-color: #c62828;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .family-tree-controls {
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+  
+  .tree-view-toggle,
+  .tree-export-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .tree-svg-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  
+  .member-actions {
+    justify-content: flex-end;
+  }
+}
+
 .result-icon {
   font-size: 48px;
   margin-bottom: var(--space-16);
