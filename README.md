@@ -1,4 +1,4 @@
-# Yek Salai Website (Free Running Cost Version)
+# Yek Salai Website
 
 A comprehensive, free web application for Meitei Yek Salai clan identification, marriage compatibility checking, and cultural preservation. Built with zero ongoing costs using static hosting and local storage.
 
