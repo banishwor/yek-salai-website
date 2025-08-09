@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yek Salai - Meitei Clan Heritage</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <span class="material-icons">light_mode</span>
+    </button>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header__content">
+                <div class="logo">
+                    <h1>Yek Salai</h1>
+                    <span class="logo__subtitle">Meitei Heritage</span>
+                </div>
+                <nav class="nav">
+                    <ul class="nav__list">
+                        <li><a href="#home" class="nav__link active">Home</a></li>
+                        <li><a href="#find-clan" class="nav__link">Find Clan</a></li>
+                        <li><a href="#marriage-check" class="nav__link">Marriage Check</a></li>
+                        <li><a href="#learn" class="nav__link">Learn</a></li>
+                        <li><a href="#family-tree" class="nav__link">Family Tree</a></li>
+                        <li><a href="#about" class="nav__link">About</a></li>
+                    </ul>
+                    <button class="nav__toggle" id="navToggle">
+                        <span class="material-icons">menu</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Home Section -->
+        <section id="home" class="section section--home active">
+            <div class="hero">
+                <div class="container">
+                    <div class="hero__content">
+                        <h2 class="hero__title">Discover Your Meitei Clan Heritage</h2>
+                        <p class="hero__description">Explore the seven sacred Yek Salai of Manipur, check marriage compatibility, and preserve your family legacy through digital genealogy.</p>
+                        <div class="hero__actions">
+                            <button class="btn btn--primary" onclick="navigateToSection('find-clan')">Find Your Clan</button>
+                            <button class="btn btn--outline" onclick="navigateToSection('marriage-check')">Check Compatibility</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="container">
+                    <h3 class="features__title">Core Features</h3>
+                    <div class="features__grid">
+                        <div class="feature-card">
+                            <div class="feature-card__icon">
+                                <span class="material-icons">search</span>
+                            </div>
+                            <h4 class="feature-card__title">Clan Identification</h4>
+                            <p class="feature-card__description">Search through 860+ surnames across all seven Yek Salai to find your clan membership.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card__icon">
+                                <span class="material-icons">favorite</span>
+                            </div>
+                            <h4 class="feature-card__title">Marriage Compatibility</h4>
+                            <p class="feature-card__description">Instant verification of marriage compatibility according to traditional Meitei customs.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card__icon">
+                                <span class="material-icons">school</span>
+                            </div>
+                            <h4 class="feature-card__title">Cultural Education</h4>
+                            <p class="feature-card__description">Learn about Meitei history, traditions, and the significance of each Yek Salai.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card__icon">
+                                <span class="material-icons">account_tree</span>
+                            </div>
+                            <h4 class="feature-card__title">Family Tree Builder</h4>
+                            <p class="feature-card__description">Create and maintain your family genealogy with offline storage capabilities.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="container">
+                    <div class="stats__grid">
+                        <div class="stat-card">
+                            <h3 class="stat-card__number" id="totalSurnamesCount">860+</h3>
+                            <p class="stat-card__label">Total Surnames</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3 class="stat-card__number">7</h3>
+                            <p class="stat-card__label">Yek Salai Clans</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3 class="stat-card__number" id="familyTreesCount">0</h3>
+                            <p class="stat-card__label">Family Trees Created</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3 class="stat-card__number" id="searchesCount">0</h3>
+                            <p class="stat-card__label">Surname Searches</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Find Clan Section -->
+        <section id="find-clan" class="section">
+            <div class="container">
+                <div class="section__header">
+                    <h2 class="section__title">Find Your Clan</h2>
+                    <p class="section__description">Search for any surname to discover which of the seven Yek Salai it belongs to.</p>
+                </div>
+
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" id="clanSearchInput" class="form-control search-input" placeholder="Enter surname to find clan...">
+                        <button class="search-btn" id="clanSearchBtn">
+                            <span class="material-icons">search</span>
+                        </button>
+                    </div>
+                    <div class="search-results" id="clanSearchResults"></div>
+                </div>
+
+                <div class="clan-browser">
+                    <h3>Browse by Clan</h3>
+                    <div class="clan-tabs" id="clanTabs">
+                        <!-- Clan tabs will be populated by JavaScript -->
+                    </div>
+                    <div class="clan-content" id="clanContent">
+                        <!-- Clan content will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Marriage Check Section -->
+        <section id="marriage-check" class="section">
+            <div class="container">
+                <div class="section__header">
+                    <h2 class="section__title">Marriage Compatibility Checker</h2>
+                    <p class="section__description">Check if marriage is allowed between two surnames according to Meitei traditions.</p>
+                </div>
+
+                <div class="marriage-checker">
+                    <div class="marriage-form">
+                        <div class="form-group">
+                            <label class="form-label">First Surname</label>
+                            <input type="text" id="surname1Input" class="form-control" placeholder="Enter first surname">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Second Surname</label>
+                            <input type="text" id="surname2Input" class="form-control" placeholder="Enter second surname">
+                        </div>
+                        <button class="btn btn--primary btn--full-width" id="checkCompatibilityBtn">Check Compatibility</button>
+                    </div>
+
+                    <div class="compatibility-result" id="compatibilityResult">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+
+                <div class="marriage-rules">
+                    <h3>Marriage Rules Explained</h3>
+                    <div class="rules-grid">
+                        <div class="rule-card rule-card--prohibited">
+                            <h4>Yek Tinnaba</h4>
+                            <p>Marriage within the same Yek Salai (clan) is prohibited. This maintains genetic diversity and strengthens inter-clan relationships.</p>
+                        </div>
+                        <div class="rule-card rule-card--prohibited">
+                            <h4>Shairuk Tinnaba</h4>
+                            <p>Marriage within the same lineage or sub-clan is also not allowed, even across different Yek Salai in some cases.</p>
+                        </div>
+                        <div class="rule-card rule-card--allowed">
+                            <h4>Allowed Marriages</h4>
+                            <p>Marriages between different Yek Salai are generally permitted and encouraged to strengthen community bonds.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Learn Section -->
+        <section id="learn" class="section">
+            <div class="container">
+                <div class="section__header">
+                    <h2 class="section__title">Learn About Meitei Culture</h2>
+                    <p class="section__description">Discover the rich history and traditions of the Meitei people and their clan system.</p>
+                </div>
+
+                <div class="learning-modules">
+                    <div class="module-card">
+                        <h3>The Seven Yek Salai</h3>
+                        <p>Learn about the origin and significance of each clan:</p>
+                        <div class="clan-info-grid" id="clanInfoGrid">
+                            <!-- Clan information will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="module-card">
+                        <h3>Historical Timeline</h3>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-date">Ancient Times</div>
+                                <div class="timeline-content">
+                                    <h4>Formation of Yek Salai</h4>
+                                    <p>The seven clans were established to organize Meitei society and maintain cultural traditions.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-date">Medieval Period</div>
+                                <div class="timeline-content">
+                                    <h4>Royal Recognition</h4>
+                                    <p>The Meitei kings formalized the clan system, assigning roles and responsibilities to each Yek Salai.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-date">Modern Era</div>
+                                <div class="timeline-content">
+                                    <h4>Cultural Preservation</h4>
+                                    <p>Digital initiatives like this platform help preserve and share clan heritage with new generations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="module-card">
+                        <h3>Test Your Knowledge</h3>
+                        <div class="quiz-container" id="quizContainer">
+                            <p>Take our interactive quiz to test your understanding of Meitei clan traditions!</p>
+                            <button class="btn btn--primary" id="startQuizBtn">Start Quiz</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Family Tree Section -->
+        <section id="family-tree" class="section">
+            <div class="container">
+                <div class="section__header">
+                    <h2 class="section__title">Family Tree Builder</h2>
+                    <p class="section__description">Create and maintain your family genealogy with offline storage.</p>
+                </div>
+
+                <div class="family-tree-tools">
+                    <div class="tree-actions">
+                        <button class="btn btn--primary" id="addMemberBtn">Add Family Member</button>
+                        <button class="btn btn--outline" id="exportTreeBtn">Export Tree</button>
+                        <button class="btn btn--outline" id="clearTreeBtn">Clear Tree</button>
+                    </div>
+
+                    <div class="family-tree-container" id="familyTreeContainer">
+                        <div class="tree-placeholder">
+                            <span class="material-icons">account_tree</span>
+                            <p>Start building your family tree by adding the first family member.</p>
+                        </div>
+                    </div>
+
+                    <!-- Add Member Modal -->
+                    <div class="modal hidden" id="addMemberModal">
+                        <div class="modal__overlay" onclick="closeModal('addMemberModal')"></div>
+                        <div class="modal__content">
+                            <div class="modal__header">
+                                <h3>Add Family Member</h3>
+                                <button class="modal__close" onclick="closeModal('addMemberModal')">
+                                    <span class="material-icons">close</span>
+                                </button>
+                            </div>
+                            <div class="modal__body">
+                                <form id="addMemberForm">
+                                    <div class="form-group">
+                                        <label class="form-label">Full Name</label>
+                                        <input type="text" id="memberName" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Surname</label>
+                                        <input type="text" id="memberSurname" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Relationship</label>
+                                        <select id="memberRelationship" class="form-control" required>
+                                            <option value="">Select relationship</option>
+                                            <option value="self">Self</option>
+                                            <option value="father">Father</option>
+                                            <option value="mother">Mother</option>
+                                            <option value="spouse">Spouse</option>
+                                            <option value="child">Child</option>
+                                            <option value="sibling">Sibling</option>
+                                            <option value="grandparent">Grandparent</option>
+                                            <option value="grandchild">Grandchild</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Birth Year (Optional)</label>
+                                        <input type="number" id="memberBirthYear" class="form-control" min="1900" max="2025">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Notes (Optional)</label>
+                                        <textarea id="memberNotes" class="form-control" rows="3"></textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal__footer">
+                                <button class="btn btn--outline" onclick="closeModal('addMemberModal')">Cancel</button>
+                                <button class="btn btn--primary" onclick="saveFamilyMember()">Add Member</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section">
+            <div class="container">
+                <div class="section__header">
+                    <h2 class="section__title">About Yek Salai</h2>
+                    <p class="section__description">Understanding the cultural significance and purpose of this digital heritage platform.</p>
+                </div>
+
+                <div class="about-content">
+                    <div class="about-card">
+                        <h3>Cultural Preservation</h3>
+                        <p>This platform serves as a digital repository for Meitei clan heritage, ensuring that traditional knowledge and customs are preserved for future generations. By making this information accessible and searchable, we help maintain the continuity of our cultural identity.</p>
+                    </div>
+
+                    <div class="about-card">
+                        <h3>Community Empowerment</h3>
+                        <p>The Yek Salai system has been integral to Meitei society for centuries. This tool empowers community members to make informed decisions about marriage, understand their cultural identity, and maintain connections with their heritage.</p>
+                    </div>
+
+                    <div class="about-card">
+                        <h3>Free & Accessible</h3>
+                        <p>Built as a community service, this platform operates entirely offline after initial load, requires no registration, and stores all data locally on your device. This ensures privacy, accessibility, and sustainability without ongoing costs.</p>
+                    </div>
+
+                    <div class="about-card">
+                        <h3>Open Source Initiative</h3>
+                        <p>This project is open source and welcomes community contributions. We encourage cultural scholars, developers, and community members to help improve and expand the platform's capabilities.</p>
+                    </div>
+                </div>
+
+                <div class="contact-info">
+                    <h3>Get Involved</h3>
+                    <p>Help us improve this platform by contributing clan data, reporting errors, or suggesting new features. Together, we can preserve and celebrate our rich Meitei heritage.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer__content">
+                <div class="footer__section">
+                    <h4>Yek Salai</h4>
+                    <p>Preserving Meitei heritage through digital innovation.</p>
+                </div>
+                <div class="footer__section">
+                    <h4>Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="#find-clan">Find Clan</a></li>
+                        <li><a href="#marriage-check">Marriage Check</a></li>
+                        <li><a href="#learn">Learn</a></li>
+                        <li><a href="#family-tree">Family Tree</a></li>
+                    </ul>
+                </div>
+                <div class="footer__section">
+                    <h4>Resources</h4>
+                    <ul class="footer__links">
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#" target="_blank">GitHub Repository</a></li>
+                        <li><a href="#" target="_blank">Cultural Documentation</a></li>
+                    </ul>
+                </div>
+                <div class="footer__section">
+                    <h4>Community</h4>
+                    <p>Built with respect for Meitei culture and traditions.</p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <p>&copy; 2025 Yek Salai Digital Heritage Project. Open source and community-driven.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Indicator -->
+    <div class="loading-indicator hidden" id="loadingIndicator">
+        <div class="spinner"></div>
+        <p>Loading clan data...</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
