@@ -55,15 +55,25 @@ class YekSalaiApp {
 
     async loadClanData() {
         try {
-            // Try relative path first (for local development)
-            let response = await fetch('./yek_salai_database.json');
+            let response;
+            let jsonUrl;
             
-            // If that fails, try absolute path for GitHub Pages
-            if (!response.ok) {
-                response = await fetch('/yek-salai-website/yek_salai_database.json');
+            // Detect if we're on GitHub Pages
+            const isGitHubPages = window.location.hostname === 'banishwor.github.io';
+            
+            if (isGitHubPages) {
+                // Use GitHub Pages path
+                jsonUrl = '/yek-salai-website/yek_salai_database.json';
+                console.log('Loading from GitHub Pages:', jsonUrl);
+                response = await fetch(jsonUrl);
+            } else {
+                // Use relative path for local development
+                jsonUrl = './yek_salai_database.json';
+                console.log('Loading locally:', jsonUrl);
+                response = await fetch(jsonUrl);
             }
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status} for ${jsonUrl}`);
             
             const json = await response.json();
             console.log('Raw JSON loaded:', json); // Debug log
