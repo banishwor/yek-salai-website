@@ -162,7 +162,13 @@
                             <label class="form-label">Second Surname</label>
                             <input type="text" id="surname2Input" class="form-control" placeholder="Enter second surname">
                         </div>
-                        <button class="btn btn--primary btn--full-width" id="checkCompatibilityBtn">Check Compatibility</button>
+                        <div class="marriage-form-actions">
+                            <button class="btn btn--primary" id="checkCompatibilityBtn">Check Basic Compatibility</button>
+                            <button class="btn btn--outline" id="checkWithFamilyHistoryBtn" onclick="window.app.checkCompatibilityWithFamilyHistoryBtn()">
+                                <span class="material-icons">account_tree</span>
+                                Check with Family History
+                            </button>
+                        </div>
                     </div>
 
                     <div class="compatibility-result" id="compatibilityResult">
@@ -185,6 +191,12 @@
                             <h4>Allowed Marriages</h4>
                             <p>Marriages between different Yek Salai are generally permitted and encouraged to strengthen community bonds.</p>
                         </div>
+                    </div>
+                    <div class="marriage-rules-actions">
+                        <button class="btn btn--outline" onclick="window.app.showMarriageRulesEducation()">
+                            <span class="material-icons">school</span>
+                            Learn More About Rules
+                        </button>
                     </div>
                 </div>
             </div>

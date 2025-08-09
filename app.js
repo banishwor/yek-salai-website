@@ -44,7 +44,7 @@ class YekSalaiApp {
             "yek_tinnaba": {
                 "type": "permanent",
                 "description": "Same clan marriage forbidden",
-                "check": (clan1, clan2) => clan1 === clan2,
+                "check": (clan1, clan2) => clan1.id === clan2.id,
                 "severity": "critical",
                 "generations": "permanent"
             },
@@ -54,7 +54,7 @@ class YekSalaiApp {
                 "forbidden_pairs": [
                     ["Khuman", "Luwang"],
                     ["Moirang", "Angom"], 
-                    ["Khaba Nganba", "Salai Leisangthem"]
+                    ["Khaba Nganba", "Salang Leisangthem"]
                 ],
                 "achouba": { "generations": "permanent", "applies_to": "royal" },
                 "macha": { "generations": 2, "applies_to": "common" }
@@ -539,7 +539,7 @@ class YekSalaiApp {
 
     checkDetailedCompatibility(clan1, clan2, surname1, surname2) {
         // 1. Check Yek Tinnaba (Same clan prohibition)
-        if (this.marriageRules.yek_tinnaba.check(clan1, clan2)) {
+        if (this.marriageRules.yek_tinnaba.check({id: clan1}, {id: clan2})) {
             return {
                 type: 'incompatible',
                 title: 'Marriage Not Allowed - Yek Tinnaba',
@@ -562,7 +562,10 @@ class YekSalaiApp {
             };
         }
 
-        // 3. If no restrictions found, marriage is allowed
+        // 3. Check Mungnaba (Kinship restrictions) - if we had family history
+        // This would require additional family tree analysis
+
+        // 4. If no restrictions found, marriage is allowed
         return {
             type: 'compatible',
             title: 'Marriage Allowed',
@@ -602,6 +605,162 @@ class YekSalaiApp {
         `;
         
         resultContainer.className = `compatibility-result active ${type}`;
+    }
+
+    showEnhancedCompatibilityResult(enhancedResult) {
+        const resultContainer = document.getElementById('compatibilityResult');
+        if (!resultContainer) return;
+        
+        let iconClass = 'check_circle';
+        if (enhancedResult.severity === 'critical') {
+            iconClass = 'cancel';
+        } else if (enhancedResult.severity === 'warning') {
+            iconClass = 'warning';
+        }
+        
+        resultContainer.innerHTML = `
+            <div class="result-icon">
+                <span class="material-icons">${iconClass}</span>
+            </div>
+            <div class="result-title">${enhancedResult.explanation}</div>
+            ${enhancedResult.diagram ? `<div class="result-diagram">${enhancedResult.diagram}</div>` : ''}
+        `;
+        
+        resultContainer.className = `compatibility-result active ${enhancedResult.severity}`;
+    }
+
+        getMarriageRuleInfo(ruleName) {
+        if (!this.marriageRules[ruleName]) {
+            return null;
+        }
+
+        const rule = this.marriageRules[ruleName];
+        let info = {
+            name: ruleName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: rule.description || '',
+            type: rule.type || 'general',
+            severity: rule.severity || 'medium',
+            generations: rule.generations || 'varies'
+        };
+
+        // Add specific details based on rule type
+        switch (ruleName) {
+            case 'yek_tinnaba':
+                info.details = 'Permanent prohibition of marriage within the same clan';
+                info.cultural_significance = 'Maintains clan purity and prevents inbreeding';
+                break;
+
+            case 'shairuk_tinnaba':
+                info.details = `Inter-clan restrictions with ${rule.forbidden_pairs.length} forbidden pairs`;
+                info.forbidden_pairs = rule.forbidden_pairs;
+                info.achouba = rule.achouba;
+                info.macha = rule.macha;
+                break;
+
+            case 'mungnaba':
+                info.details = 'Kinship-based restrictions through maternal and paternal lines';
+                info.ee_mungnaba = rule.ee_mungnaba;
+                info.manem_matung = rule.manem_matung;
+                break;
+
+            case 'pen_tinnaba':
+                info.details = 'Matrilineal descent restrictions';
+                info.matrilineal = rule.matrilineal;
+                break;
+        }
+
+        return info;
+    }
+
+    showMarriageRulesEducation() {
+        const container = document.getElementById('compatibilityResult');
+        if (!container) return;
+
+        const rules = ['yek_tinnaba', 'shairuk_tinnaba', 'mungnaba', 'pen_tinnaba'];
+        let html = '<div class="marriage-rules-education">';
+        html += '<h3>Meitei Marriage Rules Guide</h3>';
+        
+        rules.forEach(ruleName => {
+            const ruleInfo = this.getMarriageRuleInfo(ruleName);
+            if (ruleInfo) {
+                html += `
+                    <div class="rule-section">
+                        <h4>${ruleInfo.name}</h4>
+                        <p><strong>Description:</strong> ${ruleInfo.description}</p>
+                        <p><strong>Details:</strong> ${ruleInfo.details}</p>
+                        <p><strong>Cultural Significance:</strong> ${ruleInfo.cultural_significance}</p>
+                        <p><strong>Severity:</strong> <span class="severity-${ruleInfo.severity}">${ruleInfo.severity}</span></p>
+                        <p><strong>Generations:</strong> ${ruleInfo.generations}</p>
+                    </div>
+                `;
+            }
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        container.className = 'compatibility-result active education';
+    }
+
+    checkCompatibilityWithFamilyHistory(surname1, surname2) {
+        // This method integrates family tree data with marriage compatibility checking
+        if (!this.familyTree || Object.keys(this.familyTree).length === 0) {
+            return this.enhancedMarriageChecker.checkCompatibility(surname1, surname2);
+        }
+
+        // Analyze family tree for kinship relationships
+        const familyHistory = this.analyzeFamilyHistory(surname1, surname2);
+        
+        // Use enhanced marriage checker with family history
+        return this.enhancedMarriageChecker.checkCompatibility(surname1, surname2, familyHistory);
+    }
+
+    analyzeFamilyHistory(surname1, surname2) {
+        // Analyze family tree for common ancestors and kinship relationships
+        const analysis = {
+            commonSisters: false,
+            commonSiblings: false,
+            lineType: null,
+            generations: 0
+        };
+
+        // This is a simplified analysis - in a real implementation, you would
+        // traverse the family tree to find actual relationships
+        // For now, we'll return basic analysis
+        
+        return analysis;
+    }
+
+    checkCompatibilityWithFamilyHistoryBtn() {
+        const surname1 = document.getElementById('surname1Input')?.value.trim();
+        const surname2 = document.getElementById('surname2Input')?.value.trim();
+        
+        if (!surname1 || !surname2) {
+            this.showCompatibilityResult('error', 'Please enter both surnames', 'Both surnames are required to check compatibility.');
+            return;
+        }
+        
+        if (!this.clanData) {
+            this.showCompatibilityResult('error', 'Clan data not available', 'Please wait for the clan database to load.');
+            return;
+        }
+        
+        // Find clans for both surnames
+        const clan1 = this.findClanBySurname(surname1);
+        const clan2 = this.findClanBySurname(surname2);
+        
+        if (!clan1) {
+            this.showCompatibilityResult('error', `Surname "${surname1}" not found`, 'This surname is not in our clan database.');
+            return;
+        }
+        
+        if (!clan2) {
+            this.showCompatibilityResult('error', `Surname "${surname2}" not found`, 'This surname is not in our clan database.');
+            return;
+        }
+        
+        // Check compatibility with family history
+        const enhancedResult = this.checkCompatibilityWithFamilyHistory(surname1, surname2);
+        this.showEnhancedCompatibilityResult(enhancedResult);
     }
 
     startQuiz() {
@@ -1053,7 +1212,7 @@ class EnhancedMarriageChecker {
             severity: "none"
         };
         
-        // 1. Check Yek Tinnaba
+        // 1. Check Yek Tinnaba (Same clan prohibition)
         if (this.checkYekTinnaba(surname1, surname2)) {
             result.violations.push({
                 rule: "Yek Tinnaba",
@@ -1064,13 +1223,13 @@ class EnhancedMarriageChecker {
             });
         }
         
-        // 2. Check Shairuk Tinnaba
+        // 2. Check Shairuk Tinnaba (Inter-clan restrictions)
         const shairukViolation = this.checkShairukTinnaba(surname1, surname2);
         if (shairukViolation) {
             result.violations.push(shairukViolation);
         }
         
-        // 3. Check Mungnaba (if family history provided)
+        // 3. Check Mungnaba (Kinship restrictions - if family history provided)
         if (familyHistory) {
             const mungnabaCheck = this.checkMungnaba(familyHistory);
             if (mungnabaCheck.violation) {
@@ -1086,6 +1245,12 @@ class EnhancedMarriageChecker {
         const clan1 = this.findClanBySurname(surname1);
         const clan2 = this.findClanBySurname(surname2);
         
+        // Use the enhanced rule checking from marriageRules
+        if (window.app && window.app.marriageRules) {
+            return window.app.marriageRules.yek_tinnaba.check({id: clan1}, {id: clan2});
+        }
+        
+        // Fallback to simple comparison
         return clan1 && clan2 && clan1 === clan2;
     }
     
@@ -1170,40 +1335,63 @@ class EnhancedMarriageChecker {
     
     generateLineageDiagram(violation) {
         // Generate SVG lineage diagram showing prohibited relationship
+        const ruleName = violation.rule || "Marriage Rule";
+        const generations = violation.generations || "varies";
+        
         return `
-            <svg class="lineage-diagram" width="300" height="200" viewBox="0 0 300 200">
+            <svg class="lineage-diagram" width="400" height="250" viewBox="0 0 400 250">
                 <defs>
                     <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
                         <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
                     </marker>
+                    <marker id="prohibited" markerWidth="12" markerHeight="8" refX="12" refY="4" orient="auto">
+                        <polygon points="0 0, 12 4, 0 8" fill="#ff4444" />
+                    </marker>
                 </defs>
                 
+                <!-- Background -->
+                <rect width="400" height="250" fill="#f8f9fa" rx="10"/>
+                
                 <!-- Common Ancestor -->
-                <g class="ancestor-node" transform="translate(150, 30)">
-                    <circle r="20" fill="#ff4444" stroke="#fff" stroke-width="2"/>
-                    <text x="0" y="35" text-anchor="middle" font-size="12" fill="#333">Common Ancestor</text>
+                <g class="ancestor-node" transform="translate(200, 40)">
+                    <circle r="25" fill="#ff4444" stroke="#fff" stroke-width="3"/>
+                    <text x="0" y="8" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">Common</text>
+                    <text x="0" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">Ancestor</text>
                 </g>
                 
                 <!-- Descendant Lines -->
                 <g class="descendant-lines">
-                    <line x1="130" y1="50" x2="80" y2="100" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
-                    <line x1="170" y1="50" x2="220" y2="100" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+                    <!-- Left lineage -->
+                    <line x1="175" y1="65" x2="100" y2="120" stroke="#666" stroke-width="3" marker-end="url(#arrow)"/>
+                    <line x1="100" y1="120" x2="100" y2="160" stroke="#666" stroke-width="2"/>
+                    
+                    <!-- Right lineage -->
+                    <line x1="225" y1="65" x2="300" y2="120" stroke="#666" stroke-width="3" marker-end="url(#arrow)"/>
+                    <line x1="300" y1="120" x2="300" y2="160" stroke="#666" stroke-width="2"/>
                     
                     <!-- Prohibited marriage line -->
-                    <line x1="80" y1="150" x2="220" y2="150" stroke="#ff4444" stroke-width="3" stroke-dasharray="5,5"/>
-                    <text x="150" y="140" text-anchor="middle" font-size="10" fill="#ff4444">PROHIBITED</text>
+                    <line x1="100" y1="180" x2="300" y2="180" stroke="#ff4444" stroke-width="4" stroke-dasharray="8,4" marker-end="url(#prohibited)"/>
+                    <text x="200" y="170" text-anchor="middle" font-size="12" font-weight="bold" fill="#ff4444">MARRIAGE PROHIBITED</text>
                     
                     <!-- Descendant nodes -->
-                    <circle cx="80" cy="120" r="15" fill="#4CAF50" stroke="#fff" stroke-width="2"/>
-                    <circle cx="220" cy="120" r="15" fill="#4CAF50" stroke="#fff" stroke-width="2"/>
+                    <circle cx="100" cy="140" r="18" fill="#4CAF50" stroke="#fff" stroke-width="3"/>
+                    <circle cx="300" cy="140" r="18" fill="#4CAF50" stroke="#fff" stroke-width="3"/>
+                    
+                    <!-- Generation indicators -->
+                    <text x="100" y="200" text-anchor="middle" font-size="11" fill="#666">Generation ${generations}</text>
+                    <text x="300" y="200" text-anchor="middle" font-size="11" fill="#666">Generation ${generations}</text>
                     
                     <!-- Labels -->
-                    <text x="80" y="180" text-anchor="middle" font-size="10" fill="#333">Lineage 1</text>
-                    <text x="220" y="180" text-anchor="middle" font-size="10" fill="#333">Lineage 2</text>
+                    <text x="100" y="230" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Lineage 1</text>
+                    <text x="300" y="230" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Lineage 2</text>
                 </g>
                 
                 <!-- Rule label -->
-                <text x="150" y="15" text-anchor="middle" font-size="14" font-weight="bold" fill="#ff4444">${violation.rule}</text>
+                <text x="200" y="20" text-anchor="middle" font-size="16" font-weight="bold" fill="#ff4444">${ruleName}</text>
+                
+                <!-- Severity indicator -->
+                <circle cx="350" cy="30" r="15" fill="${violation.severity === 'critical' ? '#ff4444' : '#ffaa00'}" stroke="#fff" stroke-width="2"/>
+                <text x="350" y="35" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">${violation.severity === 'critical' ? '!' : '?'}</text>
             </svg>
         `;
     }
