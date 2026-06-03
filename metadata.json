@@ -1,0 +1,6 @@
+{
+  "name": "Meitei Yek Salai Marriage Checker",
+  "description": "A decision-support tool to determine marriage eligibility using traditional Meitei Yek Salai rules.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
