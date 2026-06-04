@@ -987,7 +987,7 @@ TRADITIONAL SCREENERS:
         <p className="font-medium text-slate-500 dark:text-slate-400">
           &copy; 2026 ‧{" "}
           <a
-            href="https://banishwor.github.io/aboutme/"
+            href="https://baniat.blogspot.com//"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:underline text-emerald-600 dark:text-emerald-400 font-semibold"
